@@ -11,4 +11,3 @@ public class ApiGWApplication {
         SpringApplication.run(ApiGWApplication.class, args);
     }
 }
-

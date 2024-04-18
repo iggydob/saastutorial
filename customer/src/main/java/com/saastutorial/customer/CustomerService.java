@@ -1,5 +1,6 @@
 package com.saastutorial.customer;
 
+import com.saastutorial.amqp.RabbitMQMessageProducer;
 import com.saastutorial.clients.fraud.FraudCheckResponse;
 import com.saastutorial.clients.fraud.FraudClient;
 import com.saastutorial.clients.notification.NotificationClient;
@@ -13,9 +14,8 @@ import org.springframework.web.client.RestTemplate;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final RestTemplate restTemplate;
-    private final NotificationClient notificationClient;
     private FraudClient fraudClient;
+    private final RabbitMQMessageProducer rabbitMQMessageProducer;
 
     public void registerCustomer(CustomerRegistrationRequest request) {
         Customer customer = Customer.builder()
@@ -34,14 +34,16 @@ public class CustomerService {
             throw new IllegalStateException("fraudster");
         }
 
-        // TODO: make it async. i.e. add to queue
+        NotificationRequest notificationRequest = new NotificationRequest(
+                customer.getId(),
+                customer.getEmail(),
+                String.format("Hi %s, welcome to SAAS-Tutorial...", customer.getFirstName())
+        );
 
-        notificationClient.sendNotification(
-                new NotificationRequest(
-                        customer.getId(),
-                        customer.getEmail(),
-                        String.format("Hi %s, welcome to SAAS-Tutorial...", customer.getFirstName())
-                )
+        rabbitMQMessageProducer.publish(
+                notificationRequest,
+                "internal.exchange",
+                "internal.notification.routing-key"
         );
     }
 }
